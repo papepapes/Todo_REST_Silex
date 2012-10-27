@@ -1,0 +1,12 @@
+[
+{% for todo in todos %}
+{% i loop.index>1 %}
+,
+{% endif %}
+    {
+        title: {{todo['title']}},
+        description: {{todo['description']}},
+        due_date: {{todo['due_date']}}
+    }
+{% endfor %}
+]

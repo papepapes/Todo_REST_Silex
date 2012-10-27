@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xml>
+    <root>
+        <todos>
+        {% for todo in todos %}
+            <todo>
+                <title>todo['title']</title>
+                <description>todo['description']</description>
+                <due_date>todo['due_date']</due_date>
+            </todo>
+        {% endor %}
+        </todos>
+    </root>
+</xml>
