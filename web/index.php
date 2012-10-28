@@ -1,5 +1,5 @@
 <?php
-
+//Initialize the application
 require_once __DIR__.'/../vendor/autoload.php';
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
@@ -14,6 +14,8 @@ $app->register(new TwigServiceProvider(), array(
 'twig.class'=>__DIR__.'/../vendor/twig/lib',
 ));
 $app->register(new Silex\Provider\SessionServiceProvider());
+
+//Register two filters
 $app->before(function(Request $request){
     $accept = $request->headers->get('Accept');
     switch($accept){
@@ -36,6 +38,9 @@ $app->after(function(Request $request, Response $response){
     
 });
 
+
+
+//Configure the routes
 $app->get('todos', function() use ($app){
     return $app['twig']->render('todo.'.$ext.'.twig');
 });
@@ -71,7 +76,7 @@ $app->get('todos/{id}', function($id) use ($app){
 $app->delete('/todos/{id}', function($id) use ($app){
     $data = $app['session']->get('todos');
     $index = -1;
-    fo($i=0; $i<count($data);$i++){
+    fo($i=0;$i<count($data);$i++){
      if($data[$i]['id']==$id){
       $index = $i;
       break;        
