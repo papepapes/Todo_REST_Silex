@@ -1,12 +1,14 @@
 [
 {% for todo in todos %}
-{% i loop.index>1 %}
-,
-{% endif %}
+	{% if loop.index>1 %}
+	,
+	{% endif %}
     {
+    	id: {{todo['id']}},
         title: {{todo['title']}},
         description: {{todo['description']}},
-        due_date: {{todo['due_date']}}
+        due_date: {{todo['due_date']}},
+        status: {{todo['status']}}
     }
 {% endfor %}
 ]

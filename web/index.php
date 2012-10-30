@@ -1,67 +1,70 @@
 <?php
-//Initialize the application
+
 require_once __DIR__.'/../vendor/autoload.php';
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
 use Silex\Provider\TwigServiceProvider;
 use Silex\Provider\SessionServiceProvider;
 
-$app = new Silex\Application();
-$ext = 'json';
 
+//Initialize the application
+$app = new Silex\Application();
+
+//register twig provider
 $app->register(new TwigServiceProvider(), array(
 'twig.path'=>__DIR__.'/views',
 'twig.class'=>__DIR__.'/../vendor/twig/lib',
 ));
+//register session provider to store todo resources
 $app->register(new Silex\Provider\SessionServiceProvider());
 
-//Register two filters
-$app->before(function(Request $request){
-    $accept = $request->headers->get('Accept');
-    switch($accept){
-    case 'text/xml': $ext='xml';break;
-    case 'text/html': $ext='html';break;    
-    default: break;
-    }
-    
-    if($app['session']->get('todos')==null)
-        $app['session']->set('todos', array());
+$app->before(function() use($app){
+	if(! $app['session']->has('todos'))
+		$app['session']->set('todos', array());
 });
 
+//AFTER filter to set the correct Content-Type: application/json or text/xml
 $app->after(function(Request $request, Response $response){
-    switch($ext){
-    case 'json': $response->headers->set('Content-Type', 'application/json'); break;
-    case 'xml': $response->headers->set('Content-Type', 'text/xml'); break;
-    case 'html': $response->headers->set('Content-Type', 'text/html'); break;  
-    default: break;    
-    }    
-    
+	if($request->headers->get('accept') == 'application/json'||$request->headers->get('accept') == 'text/xml')
+		$response->headers->set('Content-Type',$request->headers->get('accept'));
+	else $response->headers->set('Content-Type','application/json');		
 });
-
-
 
 //Configure the routes
-$app->get('todos', function() use ($app){
-    return $app['twig']->render('todo.'.$ext.'.twig');
+//GET /todos 
+$app->get('todos', function(Request $request) use($app){
+	$ext = 'json';
+	if($request->headers->get('accept')=='text/xml')
+		$ext = 'xml';
+	return $app['twig']->render('todo.'.$ext.'.twig', array('todos'=>$app['session']->get('todos')));
 });
-   
-$app->post('todos', function() use ($app){
- $id = time();    
+
+
+//POST /todos
+$app->post('todos', function(Request $request) use ($app){
+ list($microsec, $sec) = explode(' ',microtime());
+ $id = $sec.$microsec.getmypid();
+     
  $title = $request->get('title');
  $description = $request->get('description');
  $due_date = $request->get('due_date');
+ $status = $request->get('status');
  $data = $app['session']->get('todos');    
  array_push($data, array(
  'id'=>$id,
  'title'=>$title,
  'description'=>$description,
- 'due_date'=>$due_date,     
+ 'due_date'=>$due_date,
+ 'status'=>$status,		     
  ));
+ 
  $app['session']->set('todos', $data);    
  return new Response('', 201, array('Location: '=>'todos/'.$id));    
 });
 
-$app->get('todos/{id}', function($id) use ($app){
+
+//GET /todos/{id}
+$app->get('todos/{id}', function(Request $request, $id) use ($app){
     $data = $app['session']->get('todos');
     $ret_todo = array();
     foreach($data as $todo){
@@ -70,46 +73,67 @@ $app->get('todos/{id}', function($id) use ($app){
       break;        
      }
     }    
-    return $app['twig']->render('todo.'.$ext.'.twig', array('todo'=>$ret_todo));
+    $ext = 'json';
+    if($request->headers->get('accept')=='text/xml')
+    	$ext = 'xml';
+    return $app['twig']->render('todo.'.$ext.'.twig', array('todos'=>$ret_todo));
 });
 
-$app->delete('/todos/{id}', function($id) use ($app){
-    $data = $app['session']->get('todos');
-    $index = -1;
-    fo($i=0;$i<count($data);$i++){
-     if($data[$i]['id']==$id){
-      $index = $i;
-      break;        
-     }
-    } 
-    unset($data[$index]);
-    $app['session']->set('todos', $data);
-    return new Response('',204);
+
+//DELETE /todos/{id}
+$app->delete('todos/{id}', function($id) use ($app){
+	$data = $app['session']->get('todos');
+	$todo_index = -1;
+	for($i=0; $i<count($data);$i++){
+		if($data[$i]['id']==$id){
+			$todo_index = $i;
+			break;
+		}
+	}
+	if($todo_index>-1){
+		unset($data[$todo_index]);
+		$app['session']->set('todos',$data);
+		return new Response('', 204);
+	}else{
+		return new Response('',404);	
+	}
+	
 });
 
-$app->put('/todos/{id}', function($id) use ($app){
-    $data = $app['session']->get('todos');
-    $index = -1;
-    fo($i=0; $i<count($data);$i++){
-     if($data[$i]['id']==$id){
-      $index = $i;
-      break;        
-     }
-    } 
-    $data[$index] = array(
-    'title'=> ,
-    'description'=>,
-    'due_date'=>,
-    'status'=>,    
-    );
-    $app['session']->set('todos', $data);
 
-    
-return new Response('',204, array('Location:'=>'todos/'.$id));
+/*
+//PUT /todos/{id}
+$app->delete('todos/{id}', function($id) use ($app, $ext){
+	$data = $app['session']->get('todos');
+	$todo_index = -1;
+	for($i=0; $i<count($data);$i++){
+		if($data[$i]['id']==$id){
+			$todo_index = $i;
+			break;
+		}
+	}
+	if($todo_index>-1){
+		$todo = $data[$todo_index];
+		if($request->get('title')!=null)
+			$todo['title'] = $request->get('title');
+		if($request->get('description')!=null)
+			$todo['description'] = $request->get('description');
+		if($request->get('due_date')!=null)
+			$todo['due_date'] = $request->get('due_date');
+		if($request->get('status')!=null)
+			$todo['status'] = $request->get('status');		
+		$data[$todo_index] = $todo;
+		$app['session']->set('todos', $data);
+		return new Response('', 200, array('Location: '=>'todos/'.$todo_index));
+	}else{
+		return new Response('',404);
+	}	
 });
 
-$app->options('/', function() use ($app){
-return new Response('',200, array('Allow: '=>'GET, PUT, POST, DELETE, HEAD'));
+*/
+//OPTIONS /
+$app->get('api/methods', function() use ($app){
+return new Response('',200, array('Allow: '=>'GET, PUT, POST, DELETE, OPTIONS'));
 });
 
 $app->run();
