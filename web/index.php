@@ -101,9 +101,8 @@ $app->delete('todos/{id}', function($id) use ($app){
 });
 
 
-/*
 //PUT /todos/{id}
-$app->delete('todos/{id}', function($id) use ($app, $ext){
+$app->put('todos/{id}', function(Request $request , $id) use ($app){
 	$data = $app['session']->get('todos');
 	$todo_index = -1;
 	for($i=0; $i<count($data);$i++){
@@ -112,8 +111,9 @@ $app->delete('todos/{id}', function($id) use ($app, $ext){
 			break;
 		}
 	}
+	
 	if($todo_index>-1){
-		$todo = $data[$todo_index];
+		$todo = $data[$todo_index];		
 		if($request->get('title')!=null)
 			$todo['title'] = $request->get('title');
 		if($request->get('description')!=null)
@@ -124,16 +124,16 @@ $app->delete('todos/{id}', function($id) use ($app, $ext){
 			$todo['status'] = $request->get('status');		
 		$data[$todo_index] = $todo;
 		$app['session']->set('todos', $data);
-		return new Response('', 200, array('Location: '=>'todos/'.$todo_index));
+		return new Response('', 201, array('Location'=>'todos/'.$todo['id']));
 	}else{
 		return new Response('',404);
 	}	
 });
 
-*/
+
 //OPTIONS /
 $app->get('api/methods', function() use ($app){
-return new Response('',200, array('Allow: '=>'GET, PUT, POST, DELETE, OPTIONS'));
+return new Response('',200, array('Allow: '=>'GET, PUT, POST, DELETE'));
 });
 
 $app->run();
